@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 class MovieController extends Controller
 {
     private $apiKey;
-    private $apiUrl = 'http://www.omdbapi.com/';
+    private $apiUrl = 'https://www.omdbapi.com/'; // HTTPS
 
     public function __construct()
     {
@@ -17,24 +17,56 @@ class MovieController extends Controller
 
     /**
      * Display a listing of movies.
-     *
-     * @param Request $request
-     * @return \Illuminate\View\View|\Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
             return $this->searchMovies($request);
         }
-
         return view('movies.index');
     }
 
     /**
-     * Search movies from OMDB API.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * Make HTTP request using cURL (more reliable)
+     */
+    private function makeApiRequest($url)
+    {
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_HTTPHEADER => [
+                'User-Agent: OMDB-Movie-App/1.0'
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if (!$response) {
+            return [
+                'success' => false,
+                'error' => 'Connection failed: ' . $error,
+                'http_code' => 0
+            ];
+        }
+
+        return [
+            'success' => true,
+            'response' => $response,
+            'http_code' => $httpCode
+        ];
+    }
+
+    /**
+     * Search movies from OMDB API
      */
     public function searchMovies(Request $request)
     {
@@ -47,39 +79,29 @@ class MovieController extends Controller
             'apikey' => $this->apiKey,
             's' => $search,
             'page' => $page,
-            'r' => 'json', // Explicitly request JSON response
+            'r' => 'json',
         ];
 
         if ($type) {
             $params['type'] = $type;
         }
-
         if ($year) {
             $params['y'] = $year;
         }
 
         try {
             $url = $this->apiUrl . '?' . http_build_query($params);
+            
+            $result = $this->makeApiRequest($url);
 
-            // Create stream context for better error handling
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'GET',
-                    'timeout' => 10,
-                    'ignore_errors' => true,
-                ]
-            ]);
-
-            $response = file_get_contents($url, false, $context);
-
-            if ($response === false) {
+            if (!$result['success']) {
                 return response()->json([
                     'Response' => 'False',
-                    'Error' => 'Failed to connect to OMDB API. Please check your internet connection and API key.',
+                    'Error' => 'Failed to connect to OMDB API: ' . $result['error'],
                 ], 500);
             }
 
-            $data = json_decode($response, true);
+            $data = json_decode($result['response'], true);
 
             if (!$data) {
                 return response()->json([
@@ -88,8 +110,7 @@ class MovieController extends Controller
                 ], 500);
             }
 
-            // Get user favorites for marking
-            /** @var \App\User $user */
+            // Add favorites marking
             $user = auth()->user();
             $userFavorites = $user->favorites()->pluck('imdb_id')->toArray();
 
@@ -109,10 +130,7 @@ class MovieController extends Controller
     }
 
     /**
-     * Display the specified movie.
-     *
-     * @param string $id
-     * @return \Illuminate\View\View
+     * Display movie details
      */
     public function show($id)
     {
@@ -121,27 +139,18 @@ class MovieController extends Controller
                 'apikey' => $this->apiKey,
                 'i' => $id,
                 'plot' => 'full',
-                'r' => 'json', // Explicitly request JSON response
+                'r' => 'json',
             ];
 
             $url = $this->apiUrl . '?' . http_build_query($params);
+            
+            $result = $this->makeApiRequest($url);
 
-            // Create stream context for better error handling
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'GET',
-                    'timeout' => 10,
-                    'ignore_errors' => true,
-                ]
-            ]);
-
-            $response = file_get_contents($url, false, $context);
-
-            if ($response === false) {
-                abort(500, 'Failed to connect to OMDB API. Please check your API key.');
+            if (!$result['success']) {
+                abort(500, 'Failed to connect to OMDB API');
             }
 
-            $movie = json_decode($response, true);
+            $movie = json_decode($result['response'], true);
 
             if (!$movie) {
                 abort(500, 'Invalid response from OMDB API');
@@ -151,17 +160,14 @@ class MovieController extends Controller
                 abort(404, $movie['Error'] ?? 'Movie not found');
             }
 
-            // Check if movie is in favorites
-            /** @var \App\User $user */
+            // Add favorite status
             $user = auth()->user();
-            $isFavorite = $user->favorites()
-                ->where('imdb_id', $id)
-                ->exists();
+            $isFavorite = $user->favorites()->where('imdb_id', $id)->exists();
+            $movie['is_favorite'] = $isFavorite;
 
-            return view('movies.show', compact('movie', 'isFavorite'));
+            return view('movies.show', ['movie' => $movie]);
         } catch (\Exception $e) {
-            \Log::error('Failed to fetch movie: ' . $e->getMessage());
-            abort(500, 'Failed to fetch movie details');
+            abort(500, 'Error fetching movie details: ' . $e->getMessage());
         }
     }
 }
