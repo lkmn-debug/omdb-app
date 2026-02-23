@@ -41,3 +41,31 @@ Route::get('/lang/{locale}', function ($locale) {
     }
     return redirect()->back();
 })->name('language.switch');
+
+Route::get('/test-omdb', function () {
+
+    $apiKey = env('OMDB_API_KEY');
+
+    $url = "https://www.omdbapi.com/?apikey={$apiKey}&s=batman";
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
+
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return response()->json([
+        'api_key' => $apiKey,
+        'http_code' => $httpCode,
+        'error' => $error,
+        'response_sample' => substr($response, 0, 500)
+    ]);
+});
