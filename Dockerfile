@@ -1,10 +1,13 @@
 FROM php:7.4-apache
 
-# Install extension
+# Install MySQL extension
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Disable event MPM dan aktifkan prefork (aman untuk mod_php)
-RUN a2dismod mpm_event
+# Remove default MPM configs
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.conf
+
+# Ensure prefork is enabled
 RUN a2enmod mpm_prefork
 
 # Enable rewrite
@@ -14,7 +17,7 @@ WORKDIR /var/www/html
 
 COPY . .
 
-# Set document root ke public
+# Set document root to public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
