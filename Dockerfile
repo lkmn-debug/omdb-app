@@ -1,9 +1,13 @@
 FROM php:7.4-apache
 
-# Install extensions
-RUN docker-php-ext-install pdo pdo_mysql
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install pdo pdo_mysql zip
 
-# Enable rewrite only (JANGAN sentuh MPM)
+# Enable rewrite
 RUN a2enmod rewrite
 
 WORKDIR /var/www/html
@@ -12,7 +16,9 @@ COPY . .
 
 # Install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # Set document root to public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
