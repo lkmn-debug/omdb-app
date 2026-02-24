@@ -106,31 +106,28 @@
         margin-top: 0.25rem;
     }
 
-    .form-check {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-check-input {
-        width: 20px;
-        height: 20px;
-        border: 2px solid rgba(212, 175, 55, 0.4);
-        background: rgba(26, 26, 26, 0.6);
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
         cursor: pointer;
+        z-index: 10;
+        background: none;
+        border: none;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
     }
 
-    .form-check-input:checked {
-        background-color: var(--gold);
-        border-color: var(--gold);
+    .password-toggle:hover svg {
+        stroke: var(--gold);
     }
 
-    .form-check-input:focus {
-        box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
-    }
-
-    .form-check-label {
-        color: var(--gold-light);
-        margin-left: 0.5rem;
-        cursor: pointer;
+    .password-input {
+        padding-right: 48px !important;
     }
 
     .auth-button {
@@ -161,22 +158,6 @@
 
     .auth-button:active {
         transform: translateY(0);
-    }
-
-    .test-credentials {
-        margin-top: 2rem;
-        padding: 1rem;
-        background: rgba(212, 175, 55, 0.1);
-        border: 1px solid rgba(212, 175, 55, 0.2);
-        border-radius: 10px;
-        color: var(--gold-light);
-        font-size: 0.9rem;
-        text-align: center;
-    }
-
-    .test-credentials strong {
-        color: var(--gold);
-        font-weight: 600;
     }
 </style>
 @endsection
@@ -239,20 +220,28 @@
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                                 <input type="password"
-                                    class="auth-input @error('password') is-invalid @enderror"
+                                    class="auth-input password-input @error('password') is-invalid @enderror"
                                     id="password"
                                     name="password"
                                     required
                                     placeholder="{{ __('messages.enter_password') }}">
+                                <!-- Toggle Password Visibility Button -->
+                                <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+                                    <!-- Eye Icon (Show) -->
+                                    <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <circle cx="12" cy="12" r="3" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    <!-- Eye Off Icon (Hide) -->
+                                    <svg id="eyeOffIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <line x1="1" y1="1" x2="23" y2="23" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </button>
                             </div>
                             @error('password')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
-                        </div>
-
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">{{ __('messages.remember_me') }}</label>
                         </div>
 
                         <button type="submit" class="auth-button">
@@ -265,14 +254,37 @@
                             {{ __('messages.login') }}
                         </button>
                     </form>
-
-                    <div class="test-credentials">
-                        {{ __('messages.test_credentials') }}<br>
-                        <strong>Username:</strong> aldmic | <strong>Password:</strong> 123abc123
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const eyeOffIcon = document.getElementById('eyeOffIcon');
+
+        if (togglePassword && password && eyeIcon && eyeOffIcon) {
+            togglePassword.addEventListener('click', function() {
+                // Toggle the type attribute
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+
+                // Toggle the eye icons
+                if (type === 'password') {
+                    eyeIcon.style.display = 'block';
+                    eyeOffIcon.style.display = 'none';
+                } else {
+                    eyeIcon.style.display = 'none';
+                    eyeOffIcon.style.display = 'block';
+                }
+            });
+        }
+    });
+</script>
 @endsection
