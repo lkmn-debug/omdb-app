@@ -165,7 +165,7 @@ class MovieController extends Controller
             $isFavorite = $user->favorites()->where('imdb_id', $id)->exists();
             $movie['is_favorite'] = $isFavorite;
 
-            return view('movies.show', ['movie' => $movie]);
+            return view('movies.show', ['movie' => $movie, 'isFavorite' => $isFavorite]);
         } catch (\Exception $e) {
             abort(500, 'Error fetching movie details: ' . $e->getMessage());
         }
