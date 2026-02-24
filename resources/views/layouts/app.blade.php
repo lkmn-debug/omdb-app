@@ -368,14 +368,63 @@
             color: var(--gold);
         }
 
+        /* Navbar Toggler (Hamburger) Styling */
+        .navbar-toggler {
+            border: 2px solid var(--gold);
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(212, 175, 55, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .navbar-toggler:hover {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+        }
+
+        .navbar-toggler-icon {
+            width: 24px;
+            height: 24px;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23d4af37' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+            filter: none !important;
+        }
+
         /* Navbar Responsive */
         @media (max-width: 991.98px) {
+
+            /* Force Bootstrap collapse to work properly */
             .navbar-collapse {
                 background: rgba(26, 26, 26, 0.98);
                 border-radius: 15px;
                 padding: 1rem;
                 margin-top: 1rem;
                 border: 1px solid rgba(212, 175, 55, 0.2);
+                backdrop-filter: blur(10px);
+                position: relative;
+                z-index: 1050;
+                width: 100%;
+            }
+
+            /* Bootstrap collapse states - explicit override */
+            .navbar-collapse:not(.show) {
+                display: none !important;
+                visibility: hidden;
+            }
+
+            .navbar-collapse.show {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            .navbar-collapse.collapsing {
+                height: 0;
+                overflow: hidden;
+                transition: height 0.35s ease;
+                visibility: visible !important;
             }
 
             .nav-link {
@@ -389,21 +438,22 @@
             .language-switcher {
                 margin: 1rem 0;
             }
+
+            .d-flex.align-items-center.flex-wrap {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+            }
         }
 
         @media (min-width: 992px) {
+
+            /* Desktop: always show navbar */
             .navbar-collapse {
                 display: flex !important;
                 justify-content: space-between;
                 visibility: visible !important;
                 flex-basis: auto;
                 flex-grow: 1;
-            }
-
-            .navbar-collapse.collapsing,
-            .navbar-collapse.collapse {
-                display: flex !important;
-                height: auto !important;
             }
 
             .navbar-nav {
@@ -755,9 +805,8 @@
             </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation"
-                style="border-color: var(--gold);">
-                <span class="navbar-toggler-icon" style="filter: brightness(0) saturate(100%) invert(68%) sepia(51%) saturate(472%) hue-rotate(5deg) brightness(95%) contrast(88%);"></span>
+                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarContent">
@@ -830,35 +879,58 @@
             }
         });
 
-        // Ensure navbar is always visible on desktop
+        // Handle navbar visibility - ONLY for desktop, leave mobile to Bootstrap
         $(document).ready(function() {
-        function handleNavbar() {
-            const navbarContent = $('#navbarContent');
-            if ($(window).width() >= 992) {
-                navbarContent.addClass('show');
-            } else {
+            const $navbarContent = $('#navbarContent');
+            const $toggler = $('.navbar-toggler');
 
+            function isDesktop() {
+                return $(window).width() >= 992;
             }
-        }
-    
-        handleNavbar();
-        $(window).on('resize', handleNavbar);
 
-        $('#navbarContent a.nav-link').on('click', function() {
-            if ($(window).width() < 992) {
-                const bsCollapse = new bootstrap.Collapse($('#navbarContent')[0], {
-                    toggle: false
-                });
-                bsCollapse.hide();
+            function updateNavbar() {
+                if (isDesktop()) {
+                    // Desktop: force always visible
+                    $navbarContent.addClass('show').css('display', 'flex');
+                }
+                // Mobile: do absolutely nothing - let Bootstrap handle everything
             }
+
+            // Set initial state
+            updateNavbar();
+
+            // Debug: Log when hamburger is clicked
+            $toggler.on('click', function(e) {
+                console.log('=== Hamburger Clicked ==>');
+                console.log('Before - Has .show class:', $navbarContent.hasClass('show'));
+                console.log('Before - Display:', $navbarContent.css('display'));
+                console.log('Before - Height:', $navbarContent.height());
+
+                setTimeout(function() {
+                    console.log('After - Has .show class:', $navbarContent.hasClass('show'));
+                    console.log('After - Display:', $navbarContent.css('display'));
+                    console.log('After - Height:', $navbarContent.height());
+                    console.log('After - Visibility:', $navbarContent.css('visibility'));
+                    console.log('After - Computed style:', window.getComputedStyle($navbarContent[0]).display);
+                }, 350);
+            });
+
+            // Handle window resize
+            let resizeTimer;
+            $(window).on('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(updateNavbar, 200);
+            });
+
+            // Initialize lazy load
+            lazyLoadImages();
         });
-    });
 
         // Poster error handler - only replace if actual image fails, not loading placeholder
         function handlePosterError(img, title) {
             // Prevent infinite error loop
             img.onerror = null;
-            
+
             // Check if this is still the loading placeholder
             if (img.src.includes('via.placeholder.com')) {
                 // Still loading, don't replace yet
@@ -868,10 +940,10 @@
             // Create placeholder element using DOM API
             const placeholderDiv = document.createElement('div');
             placeholderDiv.className = 'movie-poster';
-            
+
             const posterPlaceholder = document.createElement('div');
             posterPlaceholder.className = 'poster-placeholder';
-            
+
             const content = document.createElement('div');
             content.className = 'poster-placeholder-content';
             content.innerHTML = `
@@ -882,10 +954,10 @@
                 </svg>
                 <div>${title}</div>
             `;
-            
+
             posterPlaceholder.appendChild(content);
             placeholderDiv.appendChild(posterPlaceholder);
-            
+
             // Replace the image with placeholder
             if (img.parentNode) {
                 img.parentNode.replaceChild(placeholderDiv, img);
@@ -895,11 +967,11 @@
         function handlePosterErrorDetail(img, title) {
             // Prevent infinite error loop
             img.onerror = null;
-            
+
             // Create placeholder element
             const placeholder = document.createElement('div');
             placeholder.style.cssText = 'width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%); display: flex; align-items: center; justify-content: center; border-radius: 20px; padding: 40px; position: relative; overflow: hidden;';
-            
+
             placeholder.innerHTML = `
                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at center, rgba(212, 175, 55, 0.05) 0%, transparent 70%); pointer-events: none;"></div>
                 <div style="text-align: center; color: rgba(212, 175, 55, 0.8); position: relative; z-index: 1;">
@@ -911,7 +983,7 @@
                     <div style="font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.5rem; line-height: 1.5; letter-spacing: 0.5px; text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);">${title}</div>
                 </div>
             `;
-            
+
             // Replace the image with placeholder
             if (img.parentNode) {
                 img.parentNode.replaceChild(placeholder, img);
