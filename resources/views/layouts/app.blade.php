@@ -832,17 +832,27 @@
 
         // Ensure navbar is always visible on desktop
         $(document).ready(function() {
-            function handleNavbar() {
-                if ($(window).width() >= 992) {
-                    $('#navbarContent').addClass('show').css('display', 'flex');
-                } else {
-                    $('#navbarContent').removeClass('show').css('display', '');
-                }
-            }
+        function handleNavbar() {
+            const navbarContent = $('#navbarContent');
+            if ($(window).width() >= 992) {
+                navbarContent.addClass('show');
+            } else {
 
-            handleNavbar();
-            $(window).on('resize', handleNavbar);
+            }
+        }
+    
+        handleNavbar();
+        $(window).on('resize', handleNavbar);
+
+        $('#navbarContent a.nav-link').on('click', function() {
+            if ($(window).width() < 992) {
+                const bsCollapse = new bootstrap.Collapse($('#navbarContent')[0], {
+                    toggle: false
+                });
+                bsCollapse.hide();
+            }
         });
+    });
 
         // Poster error handler - only replace if actual image fails, not loading placeholder
         function handlePosterError(img, title) {
